@@ -51,3 +51,105 @@ export interface HackerTasks {
   /** @wixFieldType number */
   difficultyLevel?: number;
 }
+
+
+/**
+ * Collection ID: gamerecords
+ * Interface for GameRecords
+ */
+export interface GameRecords {
+  _id: string;
+  _createdDate?: Date;
+  _updatedDate?: Date;
+  /** @wixFieldType text */
+  sessionId?: string;
+  /** @wixFieldType datetime */
+  startTime?: Date;
+  /** @wixFieldType datetime */
+  endTime?: Date;
+  /** @wixFieldType number */
+  durationSeconds?: number;
+  /** @wixFieldType number */
+  playerScore?: number;
+  /** @wixFieldType text */
+  outcome?: string;
+  /** @wixFieldType text */
+  puzzleId?: string;
+}
+
+
+/**
+ * Collection ID: gamerooms
+ * Interface for GameRooms
+ */
+export interface GameRooms {
+  _id: string;
+  _createdDate?: Date;
+  _updatedDate?: Date;
+  /** @wixFieldType text */
+  roomName?: string;
+  /** @wixFieldType text */
+  roomStatus?: string;
+  /** @wixFieldType number */
+  maxPlayers?: number;
+  /** @wixFieldType number */
+  currentPlayers?: number;
+  /** @wixFieldType text */
+  joinCode?: string;
+  /** @wixFieldType boolean */
+  isPrivate?: boolean;
+  /** @wixFieldType datetime */
+  creationTime?: Date;
+}
+
+
+/**
+ * Collection ID: codingevents
+ * Interface for CodingEvents
+ */
+export interface CodingEvents {
+  _id: string;
+  _createdDate?: Date;
+  _updatedDate?: Date;
+  /** @wixFieldType text */
+  eventName?: string;
+  /** @wixFieldType text */
+  eventDescription?: string;
+  /** @wixFieldType text */
+  eventRules?: string;
+  /** @wixFieldType datetime */
+  startTime?: Date;
+  /** @wixFieldType datetime */
+  endTime?: Date;
+  /** @wixFieldType text */
+  registeredParticipants?: string;
+  /** @wixFieldType number */
+  maxParticipants?: number;
+  /** @wixFieldType text */
+  eventStatus?: string;
+}
+
+
+/**
+ * Collection ID: playerprofiles
+ * Interface for PlayerProfiles
+ */
+export interface PlayerProfiles {
+  _id: string;
+  _createdDate?: Date;
+  _updatedDate?: Date;
+  /** @wixFieldType text */
+  username?: string;
+  /** @wixFieldType image */
+  avatarImage?: string;
+  /** @wixFieldType number */
+  currentRank?: number;
+  /** @wixFieldType number */
+  totalWins?: number;
+  /** @wixFieldType number */
+  totalLosses?: number;
+  /** @wixFieldType number */
+  gamesPlayed?: number;
+  /** @wixFieldType text */
+  achievementsUnlocked?: string;
+}

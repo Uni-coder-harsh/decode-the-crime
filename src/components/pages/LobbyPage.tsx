@@ -1,494 +1,316 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { motion } from 'framer-motion';
-import { 
-  Terminal, 
-  Users, 
-  Clock, 
-  Shield, 
-  Code, 
-  Play, 
-  Settings,
-  UserCheck,
-  Crown,
-  Wifi
-} from 'lucide-react';
-
-interface Room {
-  id: string;
-  name: string;
-  players: number;
-  maxPlayers: number;
-  status: 'waiting' | 'starting' | 'in-progress' | 'finished';
-  gameMode: 'classic' | 'blitz' | 'tournament';
-  difficulty: 'easy' | 'medium' | 'hard';
-  estimatedTime: number;
-}
-
-interface Player {
-  id: string;
-  username: string;
-  role?: 'hacker' | 'detective';
-  isReady: boolean;
-  isHost: boolean;
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { BaseCrudService } from '@/integrations';
+import { GameRooms, PlayerProfiles } from '@/entities';
+import { Users, Lock, Unlock, Plus, Gamepad2, Crown } from 'lucide-react';
 
 export default function LobbyPage() {
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [playerName, setPlayerName] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
-  const [roomPlayers, setRoomPlayers] = useState<Player[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([
-    {
-      id: '1',
-      name: 'Cyber Heist Championship',
-      players: 8,
-      maxPlayers: 12,
-      status: 'waiting',
-      gameMode: 'classic',
-      difficulty: 'hard',
-      estimatedTime: 45
-    },
-    {
-      id: '2',
-      name: 'Quick Code Battle',
-      players: 4,
-      maxPlayers: 8,
-      status: 'waiting',
-      gameMode: 'blitz',
-      difficulty: 'medium',
-      estimatedTime: 15
-    },
-    {
-      id: '3',
-      name: 'Detective Training',
-      players: 2,
-      maxPlayers: 6,
-      status: 'starting',
-      gameMode: 'classic',
-      difficulty: 'easy',
-      estimatedTime: 30
-    },
-    {
-      id: '4',
-      name: 'Elite Hackers Only',
-      players: 10,
-      maxPlayers: 16,
-      status: 'in-progress',
-      gameMode: 'tournament',
-      difficulty: 'hard',
-      estimatedTime: 60
-    }
-  ]);
+  const navigate = useNavigate();
+  const [rooms, setRooms] = useState<GameRooms[]>([]);
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfiles | null>(null);
+  const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [maxPlayers, setMaxPlayers] = useState(4);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [showJoinPrivate, setShowJoinPrivate] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate WebSocket connection
-    const timer = setTimeout(() => {
-      setIsConnected(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    loadData();
   }, []);
 
-  useEffect(() => {
-    // Simulate room players when a room is selected
-    if (selectedRoom) {
-      const mockPlayers: Player[] = [
-        { id: '1', username: 'CyberNinja', role: 'hacker' as const, isReady: true, isHost: true },
-        { id: '2', username: 'DetectiveX', role: 'detective' as const, isReady: true, isHost: false },
-        { id: '3', username: 'CodeBreaker', role: 'hacker' as const, isReady: false, isHost: false },
-        { id: '4', username: 'SherlockDev', role: 'detective' as const, isReady: true, isHost: false },
-      ].slice(0, selectedRoom.players);
-      setRoomPlayers(mockPlayers);
-    }
-  }, [selectedRoom]);
+  const loadData = async () => {
+    try {
+      // Load available rooms
+      const { items: roomItems } = await BaseCrudService.getAll<GameRooms>('gamerooms');
+      setRooms(roomItems.filter(room => room.roomStatus === 'waiting'));
 
-  const handleJoinRoom = (room: Room) => {
-    if (room.status === 'in-progress' || room.players >= room.maxPlayers) return;
-    
-    setSelectedRoom(room);
-    setCurrentPlayer({
-      id: 'current-user',
-      username: playerName || 'Anonymous',
-      isReady: false,
-      isHost: false
-    });
-  };
-
-  const handleLeaveRoom = () => {
-    setSelectedRoom(null);
-    setCurrentPlayer(null);
-    setRoomPlayers([]);
-  };
-
-  const handleToggleReady = () => {
-    if (currentPlayer) {
-      setCurrentPlayer({ ...currentPlayer, isReady: !currentPlayer.isReady });
+      // Create or load player profile (simplified for demo)
+      const username = localStorage.getItem('playerUsername') || 'Anonymous';
+      const { items: profiles } = await BaseCrudService.getAll<PlayerProfiles>('playerprofiles');
+      let profile = profiles.find(p => p.username === username);
+      
+      if (!profile) {
+        profile = await BaseCrudService.create<PlayerProfiles>('playerprofiles', {
+          _id: crypto.randomUUID(),
+          username,
+          currentRank: 1000,
+          totalWins: 0,
+          totalLosses: 0,
+          gamesPlayed: 0,
+          achievementsUnlocked: 'Newcomer'
+        });
+      }
+      
+      setPlayerProfile(profile);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'waiting': return 'bg-green-500';
-      case 'starting': return 'bg-yellow-500';
-      case 'in-progress': return 'bg-red-500';
-      case 'finished': return 'bg-gray-500';
-      default: return 'bg-gray-500';
+  const createRoom = async () => {
+    if (!newRoomName.trim()) return;
+
+    try {
+      const roomCode = isPrivate ? Math.random().toString(36).substring(2, 8).toUpperCase() : '';
+      
+      await BaseCrudService.create<GameRooms>('gamerooms', {
+        _id: crypto.randomUUID(),
+        roomName: newRoomName,
+        roomStatus: 'waiting',
+        maxPlayers,
+        currentPlayers: 0,
+        joinCode: roomCode,
+        isPrivate,
+        creationTime: new Date()
+      });
+
+      setShowCreateRoom(false);
+      setNewRoomName('');
+      loadData();
+    } catch (error) {
+      console.error('Error creating room:', error);
     }
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'text-green-500';
-      case 'medium': return 'text-yellow-500';
-      case 'hard': return 'text-red-500';
-      default: return 'text-gray-500';
+  const joinRoom = async (room: GameRooms) => {
+    try {
+      // Update room player count
+      await BaseCrudService.update<GameRooms>('gamerooms', {
+        _id: room._id,
+        currentPlayers: (room.currentPlayers || 0) + 1
+      });
+
+      // Navigate to game with room info
+      navigate('/game', { state: { roomId: room._id, roomName: room.roomName } });
+    } catch (error) {
+      console.error('Error joining room:', error);
     }
   };
 
-  if (!selectedRoom) {
+  const joinPrivateRoom = async () => {
+    if (!joinCode.trim()) return;
+
+    try {
+      const { items: rooms } = await BaseCrudService.getAll<GameRooms>('gamerooms');
+      const room = rooms.find(r => r.joinCode === joinCode.toUpperCase() && r.roomStatus === 'waiting');
+      
+      if (room) {
+        await joinRoom(room);
+      } else {
+        alert('Invalid room code or room not available');
+      }
+    } catch (error) {
+      console.error('Error joining private room:', error);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="flex items-center justify-between p-6 bg-background border-b border-primary/20">
-          <div className="flex items-center space-x-2">
-            <Terminal className="h-8 w-8 text-primary" />
-            <span className="text-xl font-heading font-bold text-textprimary">DECODE THE CRIME</span>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="font-paragraph text-sm text-textprimary">
-                {isConnected ? 'Connected' : 'Connecting...'}
-              </span>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">Back to Home</Link>
-            </Button>
-          </div>
-        </header>
-
-        <div className="max-w-7xl mx-auto p-6">
-          {/* Player Setup */}
-          <div className="mb-8">
-            <Card className="p-6 bg-secondary border-primary/20">
-              <h2 className="text-2xl font-heading font-bold text-secondary-foreground mb-4">
-                Join the Competition
-              </h2>
-              <div className="flex flex-col sm:flex-row gap-4 max-w-md">
-                <Input
-                  placeholder="Enter your username"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="font-paragraph"
-                />
-                <Button 
-                  disabled={!playerName.trim() || !isConnected}
-                  className="font-paragraph"
-                >
-                  <UserCheck className="mr-2 h-4 w-4" />
-                  Set Username
-                </Button>
-              </div>
-            </Card>
-          </div>
-
-          {/* Room List */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-heading font-bold text-textprimary">
-                Active Rooms
-              </h2>
-              <Button asChild variant="outline">
-                <Link to="/admin">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Create Room
-                </Link>
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {rooms.map((room) => (
-                <motion.div
-                  key={room.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="p-6 hover:border-primary/40 transition-colors cursor-pointer">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-heading font-semibold text-textprimary mb-2">
-                          {room.name}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm font-paragraph text-textprimary/70">
-                          <div className="flex items-center space-x-1">
-                            <Users className="h-4 w-4" />
-                            <span>{room.players}/{room.maxPlayers}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{room.estimatedTime}m</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end space-y-2">
-                        <div className={`w-3 h-3 rounded-full ${getStatusColor(room.status)}`} />
-                        <Badge variant="outline" className="font-paragraph text-xs">
-                          {room.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <Badge variant="secondary" className="font-paragraph">
-                          {room.gameMode.toUpperCase()}
-                        </Badge>
-                        <span className={`font-paragraph text-sm font-semibold ${getDifficultyColor(room.difficulty)}`}>
-                          {room.difficulty.toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => handleJoinRoom(room)}
-                      disabled={room.status === 'in-progress' || room.players >= room.maxPlayers || !playerName.trim()}
-                      className="w-full font-paragraph"
-                      variant={room.status === 'waiting' ? 'default' : 'secondary'}
-                    >
-                      {room.status === 'in-progress' ? (
-                        <>
-                          <Wifi className="mr-2 h-4 w-4" />
-                          In Progress
-                        </>
-                      ) : room.players >= room.maxPlayers ? (
-                        'Room Full'
-                      ) : (
-                        <>
-                          <Play className="mr-2 h-4 w-4" />
-                          Join Room
-                        </>
-                      )}
-                    </Button>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-neon-green text-xl neon-text">Loading...</div>
       </div>
     );
   }
 
-  // Room View
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="flex items-center justify-between p-6 bg-background border-b border-primary/20">
-        <div className="flex items-center space-x-2">
-          <Terminal className="h-8 w-8 text-primary" />
-          <span className="text-xl font-heading font-bold text-textprimary">DECODE THE CRIME</span>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <Badge variant="outline" className="font-paragraph">
-            Room: {selectedRoom.name}
-          </Badge>
-          <Button onClick={handleLeaveRoom} variant="outline" size="sm">
-            Leave Room
-          </Button>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Room Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6 bg-secondary border-primary/20">
-              <h2 className="text-2xl font-heading font-bold text-secondary-foreground mb-4">
-                {selectedRoom.name}
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="text-center">
-                  <div className="text-2xl font-heading font-bold text-primary">
-                    {selectedRoom.players}/{selectedRoom.maxPlayers}
-                  </div>
-                  <div className="font-paragraph text-sm text-secondary-foreground/70">Players</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-heading font-bold text-primary">
-                    {selectedRoom.estimatedTime}m
-                  </div>
-                  <div className="font-paragraph text-sm text-secondary-foreground/70">Duration</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-heading font-bold ${getDifficultyColor(selectedRoom.difficulty)}`}>
-                    {selectedRoom.difficulty.toUpperCase()}
-                  </div>
-                  <div className="font-paragraph text-sm text-secondary-foreground/70">Difficulty</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-heading font-bold text-primary">
-                    {selectedRoom.gameMode.toUpperCase()}
-                  </div>
-                  <div className="font-paragraph text-sm text-secondary-foreground/70">Mode</div>
-                </div>
-              </div>
-
-              <Separator className="my-6" />
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-heading font-semibold text-secondary-foreground">
-                  Game Rules
-                </h3>
-                <ul className="space-y-2 font-paragraph text-sm text-secondary-foreground/80">
-                  <li>• Hackers solve coding challenges to gain points</li>
-                  <li>• Detectives solve logic puzzles and can make accusations</li>
-                  <li>• Real-time leaderboard tracks all player progress</li>
-                  <li>• Anti-cheat system monitors all submissions</li>
-                  <li>• Game ends when time runs out or all puzzles are solved</li>
-                </ul>
-              </div>
-            </Card>
-
-            {/* Players List */}
-            <Card className="p-6">
-              <h3 className="text-xl font-heading font-semibold text-textprimary mb-4">
-                Players ({roomPlayers.length + (currentPlayer ? 1 : 0)}/{selectedRoom.maxPlayers})
-              </h3>
-              <div className="space-y-3">
-                {/* Current Player */}
-                {currentPlayer && (
-                  <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-primary-foreground font-heading font-bold text-sm">
-                          {currentPlayer.username[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-heading font-semibold text-textprimary">
-                            {currentPlayer.username} (You)
-                          </span>
-                          {currentPlayer.role && (
-                            <Badge variant="outline" className="font-paragraph text-xs">
-                              {currentPlayer.role === 'hacker' ? (
-                                <><Code className="mr-1 h-3 w-3" /> HACKER</>
-                              ) : (
-                                <><Shield className="mr-1 h-3 w-3" /> DETECTIVE</>
-                              )}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="font-paragraph text-sm text-textprimary/70">
-                          {currentPlayer.isReady ? 'Ready' : 'Not Ready'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-3 h-3 rounded-full ${currentPlayer.isReady ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  </div>
-                )}
-
-                {/* Other Players */}
-                {roomPlayers.map((player) => (
-                  <div key={player.id} className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
-                        {player.isHost && <Crown className="h-4 w-4 text-primary" />}
-                        {!player.isHost && (
-                          <span className="text-secondary-foreground font-heading font-bold text-sm">
-                            {player.username[0].toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-heading font-semibold text-textprimary">
-                            {player.username}
-                          </span>
-                          {player.isHost && (
-                            <Badge variant="default" className="font-paragraph text-xs">
-                              HOST
-                            </Badge>
-                          )}
-                          {player.role && (
-                            <Badge variant="outline" className="font-paragraph text-xs">
-                              {player.role === 'hacker' ? (
-                                <><Code className="mr-1 h-3 w-3" /> HACKER</>
-                              ) : (
-                                <><Shield className="mr-1 h-3 w-3" /> DETECTIVE</>
-                              )}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="font-paragraph text-sm text-textprimary/70">
-                          {player.isReady ? 'Ready' : 'Not Ready'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-3 h-3 rounded-full ${player.isReady ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                  </div>
-                ))}
-              </div>
-            </Card>
+    <div className="min-h-screen bg-dark-bg matrix-bg p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-neon-green neon-text mb-2">
+              DECODE WARS LOBBY
+            </h1>
+            <p className="text-neon-blue">
+              Welcome, {playerProfile?.username} | Rank: {playerProfile?.currentRank}
+            </p>
           </div>
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => navigate('/leaderboard')}
+              className="bg-neon-purple text-white hover:bg-neon-purple/80 neon-glow"
+            >
+              <Crown className="w-4 h-4 mr-2" />
+              Leaderboard
+            </Button>
+            <Button 
+              onClick={() => navigate('/')}
+              variant="outline"
+              className="border-neon-green text-neon-green hover:bg-neon-green hover:text-black"
+            >
+              Exit
+            </Button>
+          </div>
+        </div>
 
-          {/* Controls */}
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-heading font-semibold text-textprimary mb-4">
-                Player Controls
-              </h3>
+        {/* Player Stats */}
+        <Card className="bg-dark-card border-neon-green/30 mb-8">
+          <CardHeader>
+            <CardTitle className="text-neon-green">Your Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-neon-green">{playerProfile?.gamesPlayed || 0}</div>
+                <div className="text-gray-400">Games Played</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-neon-blue">{playerProfile?.totalWins || 0}</div>
+                <div className="text-gray-400">Wins</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-destructive">{playerProfile?.totalLosses || 0}</div>
+                <div className="text-gray-400">Losses</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-neon-purple">{playerProfile?.currentRank || 1000}</div>
+                <div className="text-gray-400">Rank Points</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Room Actions */}
+        <div className="flex gap-4 mb-8">
+          <Dialog open={showCreateRoom} onOpenChange={setShowCreateRoom}>
+            <DialogTrigger asChild>
+              <Button className="bg-neon-green text-black hover:bg-neon-green/80 neon-glow">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Room
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-dark-card border-neon-green text-neon-green">
+              <DialogHeader>
+                <DialogTitle className="neon-text">Create New Room</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4">
-                <Button
-                  onClick={handleToggleReady}
-                  className="w-full font-paragraph"
-                  variant={currentPlayer?.isReady ? 'secondary' : 'default'}
-                >
-                  {currentPlayer?.isReady ? 'Cancel Ready' : 'Ready Up'}
-                </Button>
-                
-                <Button asChild variant="outline" className="w-full font-paragraph">
-                  <Link to="/game">
-                    <Play className="mr-2 h-4 w-4" />
-                    Start Game (Demo)
-                  </Link>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Room Name</label>
+                  <Input
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    placeholder="Enter room name..."
+                    className="bg-dark-bg border-neon-green/50 text-neon-green"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Max Players</label>
+                  <Input
+                    type="number"
+                    value={maxPlayers}
+                    onChange={(e) => setMaxPlayers(parseInt(e.target.value) || 4)}
+                    min={2}
+                    max={8}
+                    className="bg-dark-bg border-neon-green/50 text-neon-green"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="private"
+                    checked={isPrivate}
+                    onChange={(e) => setIsPrivate(e.target.checked)}
+                    className="rounded border-neon-green"
+                  />
+                  <label htmlFor="private" className="text-sm">Private Room</label>
+                </div>
+                <Button onClick={createRoom} className="w-full bg-neon-green text-black hover:bg-neon-green/80">
+                  Create Room
                 </Button>
               </div>
-            </Card>
+            </DialogContent>
+          </Dialog>
 
-            <Card className="p-6 bg-secondary border-primary/20">
-              <h3 className="text-lg font-heading font-semibold text-secondary-foreground mb-4">
-                Connection Status
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-paragraph text-sm text-secondary-foreground/70">Server</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    <span className="font-paragraph text-sm text-secondary-foreground">Connected</span>
-                  </div>
+          <Dialog open={showJoinPrivate} onOpenChange={setShowJoinPrivate}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-neon-blue text-neon-blue hover:bg-neon-blue hover:text-black">
+                <Lock className="w-4 h-4 mr-2" />
+                Join Private
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-dark-card border-neon-blue text-neon-green">
+              <DialogHeader>
+                <DialogTitle className="neon-text">Join Private Room</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Room Code</label>
+                  <Input
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value)}
+                    placeholder="Enter 6-digit code..."
+                    className="bg-dark-bg border-neon-blue/50 text-neon-green"
+                  />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-paragraph text-sm text-secondary-foreground/70">Ping</span>
-                  <span className="font-paragraph text-sm text-secondary-foreground">23ms</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-paragraph text-sm text-secondary-foreground/70">Players Online</span>
-                  <span className="font-paragraph text-sm text-secondary-foreground">247</span>
-                </div>
+                <Button onClick={joinPrivateRoom} className="w-full bg-neon-blue text-black hover:bg-neon-blue/80">
+                  Join Room
+                </Button>
               </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Available Rooms */}
+        <div>
+          <h2 className="text-2xl font-bold text-neon-green mb-4 neon-text">Available Rooms</h2>
+          {rooms.length === 0 ? (
+            <Card className="bg-dark-card border-neon-green/30">
+              <CardContent className="p-8 text-center">
+                <Gamepad2 className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-400">No rooms available. Create one to get started!</p>
+              </CardContent>
             </Card>
-          </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {rooms.map((room) => (
+                <Card key={room._id} className="bg-dark-card border-neon-green/30 hover:border-neon-green transition-all duration-300 hover:neon-glow">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-neon-green">{room.roomName}</CardTitle>
+                      {room.isPrivate ? (
+                        <Lock className="w-5 h-5 text-neon-purple" />
+                      ) : (
+                        <Unlock className="w-5 h-5 text-neon-blue" />
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Players:</span>
+                        <Badge variant="outline" className="border-neon-blue text-neon-blue">
+                          <Users className="w-3 h-3 mr-1" />
+                          {room.currentPlayers || 0}/{room.maxPlayers}
+                        </Badge>
+                      </div>
+                      {room.isPrivate && room.joinCode && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Code:</span>
+                          <span className="text-neon-purple font-mono">{room.joinCode}</span>
+                        </div>
+                      )}
+                      <Button 
+                        onClick={() => joinRoom(room)}
+                        disabled={(room.currentPlayers || 0) >= (room.maxPlayers || 4)}
+                        className="w-full bg-neon-green text-black hover:bg-neon-green/80 disabled:bg-gray-600 disabled:text-gray-400"
+                      >
+                        {(room.currentPlayers || 0) >= (room.maxPlayers || 4) ? 'Room Full' : 'Join Room'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

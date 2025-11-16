@@ -3,3 +3,95 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Hacker theme global styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-dark-bg text-neon-green font-mono;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(0, 212, 255, 0.1) 0%, transparent 50%);
+  }
+}
+
+/* Neon glow effects */
+.neon-glow {
+  box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+}
+
+.neon-text {
+  text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+}
+
+/* Matrix-style animation */
+@keyframes matrix-rain {
+  0% { transform: translateY(-100vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.matrix-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 98px,
+    rgba(0, 255, 65, 0.03) 100px
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Glitch effect */
+.glitch {
+  position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.glitch::before {
+  animation: glitch-1 0.5s infinite;
+  color: #00d4ff;
+  z-index: -1;
+}
+
+.glitch::after {
+  animation: glitch-2 0.5s infinite;
+  color: #7b2cbf;
+  z-index: -2;
+}
+
+@keyframes glitch-1 {
+  0%, 14%, 15%, 49%, 50%, 99%, 100% {
+    transform: translate(0);
+  }
+  15%, 49% {
+    transform: translate(-2px, 2px);
+  }
+}
+
+@keyframes glitch-2 {
+  0%, 20%, 21%, 62%, 63%, 99%, 100% {
+    transform: translate(0);
+  }
+  21%, 62% {
+    transform: translate(2px, -2px);
+  }
+}
