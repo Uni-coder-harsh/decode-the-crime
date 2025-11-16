@@ -4,6 +4,33 @@
  */
 
 /**
+ * Collection ID: codingevents
+ * Interface for CodingEvents
+ */
+export interface CodingEvents {
+  _id: string;
+  _createdDate?: Date;
+  _updatedDate?: Date;
+  /** @wixFieldType text */
+  eventName?: string;
+  /** @wixFieldType text */
+  eventDescription?: string;
+  /** @wixFieldType text */
+  eventRules?: string;
+  /** @wixFieldType datetime */
+  startTime?: Date | string;
+  /** @wixFieldType datetime */
+  endTime?: Date | string;
+  /** @wixFieldType text */
+  registeredParticipants?: string;
+  /** @wixFieldType number */
+  maxParticipants?: number;
+  /** @wixFieldType text */
+  eventStatus?: string;
+}
+
+
+/**
  * Collection ID: detectivepuzzles
  * Interface for DetectivePuzzles
  */
@@ -29,31 +56,6 @@ export interface DetectivePuzzles {
 
 
 /**
- * Collection ID: hackertasks
- * Interface for HackerTasks
- */
-export interface HackerTasks {
-  _id: string;
-  _createdDate?: Date;
-  _updatedDate?: Date;
-  /** @wixFieldType text */
-  taskName?: string;
-  /** @wixFieldType text */
-  description?: string;
-  /** @wixFieldType text */
-  problemStatement?: string;
-  /** @wixFieldType text */
-  boilerplateCode?: string;
-  /** @wixFieldType text */
-  testCasesJson?: string;
-  /** @wixFieldType text */
-  allowedLanguages?: string;
-  /** @wixFieldType number */
-  difficultyLevel?: number;
-}
-
-
-/**
  * Collection ID: gamerecords
  * Interface for GameRecords
  */
@@ -64,9 +66,9 @@ export interface GameRecords {
   /** @wixFieldType text */
   sessionId?: string;
   /** @wixFieldType datetime */
-  startTime?: Date;
+  startTime?: Date | string;
   /** @wixFieldType datetime */
-  endTime?: Date;
+  endTime?: Date | string;
   /** @wixFieldType number */
   durationSeconds?: number;
   /** @wixFieldType number */
@@ -99,34 +101,32 @@ export interface GameRooms {
   /** @wixFieldType boolean */
   isPrivate?: boolean;
   /** @wixFieldType datetime */
-  creationTime?: Date;
+  creationTime?: Date | string;
 }
 
 
 /**
- * Collection ID: codingevents
- * Interface for CodingEvents
+ * Collection ID: hackertasks
+ * Interface for HackerTasks
  */
-export interface CodingEvents {
+export interface HackerTasks {
   _id: string;
   _createdDate?: Date;
   _updatedDate?: Date;
   /** @wixFieldType text */
-  eventName?: string;
+  taskName?: string;
   /** @wixFieldType text */
-  eventDescription?: string;
+  description?: string;
   /** @wixFieldType text */
-  eventRules?: string;
-  /** @wixFieldType datetime */
-  startTime?: Date;
-  /** @wixFieldType datetime */
-  endTime?: Date;
+  problemStatement?: string;
   /** @wixFieldType text */
-  registeredParticipants?: string;
+  boilerplateCode?: string;
+  /** @wixFieldType text */
+  testCasesJson?: string;
+  /** @wixFieldType text */
+  allowedLanguages?: string;
   /** @wixFieldType number */
-  maxParticipants?: number;
-  /** @wixFieldType text */
-  eventStatus?: string;
+  difficultyLevel?: number;
 }
 
 
