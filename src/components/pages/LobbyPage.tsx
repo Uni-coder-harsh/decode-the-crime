@@ -27,12 +27,14 @@ export default function LobbyPage() {
 
   const loadData = async () => {
     try {
-      // Load available rooms
+      // Load available rooms from database
       const { items: roomItems } = await BaseCrudService.getAll<GameRooms>('gamerooms');
       setRooms(roomItems.filter(room => room.roomStatus === 'waiting'));
 
-      // Create or load player profile (simplified for demo)
+      // Get or create player profile using real database
       const username = localStorage.getItem('playerUsername') || 'Anonymous';
+      localStorage.setItem('playerUsername', username);
+      
       const { items: profiles } = await BaseCrudService.getAll<PlayerProfiles>('playerprofiles');
       let profile = profiles.find(p => p.username === username);
       

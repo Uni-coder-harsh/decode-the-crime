@@ -28,6 +28,9 @@ export default function HomePage() {
       return;
     }
 
+    // Store username for use throughout the app
+    localStorage.setItem('playerUsername', username.trim());
+
     if (username === 'Admin@123#') {
       setShowPasswordField(true);
       setError('');
