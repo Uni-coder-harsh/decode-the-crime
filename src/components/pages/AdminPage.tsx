@@ -424,6 +424,29 @@ export default function AdminPage() {
                       />
                     </div>
                     <div>
+                      <Label>Test Cases (JSON format)</Label>
+                      <Textarea
+                        value={newTask.testCasesJson}
+                        onChange={(e) => setNewTask({...newTask, testCasesJson: e.target.value})}
+                        className="bg-dark-bg border-neon-blue/50 text-neon-green"
+                        rows={4}
+                        placeholder='[{"input": "nums = [2,7,11,15], target = 9", "expectedOutput": "[0,1]"}]'
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Enter test cases as JSON array. Each test case can be a string or object with input/expectedOutput properties.
+                      </p>
+                    </div>
+                    <div>
+                      <Label>Boilerplate Code</Label>
+                      <Textarea
+                        value={newTask.boilerplateCode}
+                        onChange={(e) => setNewTask({...newTask, boilerplateCode: e.target.value})}
+                        className="bg-dark-bg border-neon-blue/50 text-neon-green"
+                        rows={3}
+                        placeholder="function solution() {\n  // Your code here\n}"
+                      />
+                    </div>
+                    <div>
                       <Label>Difficulty Level (1-5)</Label>
                       <Input
                         type="number"
@@ -434,9 +457,6 @@ export default function AdminPage() {
                         className="bg-dark-bg border-neon-blue/50 text-neon-green"
                       />
                     </div>
-                    <Button onClick={addTask} className="w-full bg-neon-blue text-black hover:bg-neon-blue/80">
-                      Add Task
-                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -451,10 +471,25 @@ export default function AdminPage() {
                         <h3 className="text-lg font-bold text-neon-blue mb-2">{task.taskName}</h3>
                         <p className="text-gray-300 mb-2">{task.description}</p>
                         <p className="text-sm text-gray-400 mb-2">{task.problemStatement}</p>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 mb-2">
                           <span className="text-sm text-neon-purple">Difficulty: {task.difficultyLevel}/5</span>
                           <span className="text-sm text-neon-green">Languages: {task.allowedLanguages}</span>
                         </div>
+                        {task.testCasesJson && (
+                          <div className="mt-2">
+                            <span className="text-xs text-gray-500">Test Cases: </span>
+                            <span className="text-xs text-neon-blue">
+                              {(() => {
+                                try {
+                                  const parsed = JSON.parse(task.testCasesJson);
+                                  return Array.isArray(parsed) ? `${parsed.length} test case(s)` : 'Invalid format';
+                                } catch {
+                                  return 'Invalid JSON';
+                                }
+                              })()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button

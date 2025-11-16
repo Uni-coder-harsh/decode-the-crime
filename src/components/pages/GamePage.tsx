@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CodeEditor } from '@/components/ui/code-editor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BaseCrudService } from '@/integrations';
 import { HackerTasks, DetectivePuzzles, GameRecords, PlayerProfiles } from '@/entities';
+import { jdoodleService, ExecutionResult } from '@/services/jdoodleService';
 import { 
   Terminal, 
   Clock, 
@@ -26,7 +28,9 @@ import {
   XCircle,
   AlertTriangle,
   Play,
-  Pause
+  Pause,
+  Zap,
+  Settings
 } from 'lucide-react';
 
 interface Player {
@@ -48,7 +52,12 @@ interface Task {
   type: 'hacker' | 'detective';
   isCompleted: boolean;
   boilerplate?: string;
-  testCases?: string[];
+  testCases?: Array<{
+    input: string;
+    expectedOutput: string;
+  }>;
+  language?: string;
+  problemType?: string;
 }
 
 interface GameState {
@@ -84,12 +93,14 @@ export default function GamePage() {
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [detectivePuzzle, setDetectivePuzzle] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState('javascript');
 
   const [codeSubmission, setCodeSubmission] = useState('');
   const [puzzleAnswer, setPuzzleAnswer] = useState('');
   const [accusationTarget, setAccusationTarget] = useState('');
   const [hintsUsed, setHintsUsed] = useState(0);
   const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [lastExecutionResult, setLastExecutionResult] = useState<ExecutionResult | null>(null);
 
   useEffect(() => {
     loadGameData();
@@ -118,7 +129,16 @@ export default function GamePage() {
           type: 'hacker',
           isCompleted: false,
           boilerplate: task.boilerplateCode || '// Write your solution here\n',
-          testCases: task.testCasesJson ? JSON.parse(task.testCasesJson) : []
+          testCases: task.testCasesJson ? (() => {
+            try {
+              const parsed = JSON.parse(task.testCasesJson);
+              // Handle both array of objects and array of strings
+              return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+              console.error('Error parsing test cases JSON:', error);
+              return [];
+            }
+          })() : []
         });
         setCodeSubmission(task.boilerplateCode || '// Write your solution here\n');
       }
@@ -393,7 +413,29 @@ export default function GamePage() {
                           <div className="space-y-2">
                             {currentTask.testCases.map((testCase, index) => (
                               <div key={index} className="bg-dark-bg p-3 rounded border border-neon-green/20">
-                                <pre className="text-sm text-gray-300 whitespace-pre-wrap">{testCase}</pre>
+                                {typeof testCase === 'string' ? (
+                                  <pre className="text-sm text-gray-300 whitespace-pre-wrap">{testCase}</pre>
+                                ) : typeof testCase === 'object' && testCase !== null ? (
+                                  <div className="text-sm text-gray-300">
+                                    {testCase.input && (
+                                      <div className="mb-2">
+                                        <span className="text-neon-blue font-semibold">Input: </span>
+                                        <span>{typeof testCase.input === 'string' ? testCase.input : JSON.stringify(testCase.input)}</span>
+                                      </div>
+                                    )}
+                                    {testCase.expectedOutput && (
+                                      <div>
+                                        <span className="text-neon-green font-semibold">Expected Output: </span>
+                                        <span>{typeof testCase.expectedOutput === 'string' ? testCase.expectedOutput : JSON.stringify(testCase.expectedOutput)}</span>
+                                      </div>
+                                    )}
+                                    {!testCase.input && !testCase.expectedOutput && (
+                                      <pre className="whitespace-pre-wrap">{JSON.stringify(testCase, null, 2)}</pre>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <pre className="text-sm text-gray-300 whitespace-pre-wrap">{String(testCase)}</pre>
+                                )}
                               </div>
                             ))}
                           </div>
